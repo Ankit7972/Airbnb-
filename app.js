@@ -6,9 +6,11 @@ const methodOverride = require("method-override");
 const ejsMate = require("ejs-mate");
 const ExpressError = require("./utils/ExpressError.js");
 const session = require("express-session");
+const flash = require("connect-flash");
 
 const listings = require("./routes/listing.js");
 const reviews = require("./routes/review.js");
+const { required } = require("joi");
 
 const MONGO_URL = "mongodb://127.0.0.1:27017/wanderlust";
 
@@ -35,12 +37,24 @@ const sessionOptions = {
   secret: "mysupersecretcode", // Used to sign the session ID cookie, ensuring security
   resave: false, // Don't save session if it wasn't modified during the request
   saveUninitialized: true, // Save new sessions even if they are not modified yet
+  cookies: {
+    expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    httpOnly: true,
+  },
 };
-
-app.use(session(sessionOptions));
 
 app.get("/", (req, res) => {
   res.send("Hi, I am root");
+});
+
+app.use(session(sessionOptions));
+app.use(flash());
+
+app.use((req, res, next) => {
+  res.locals.success = req.flash("success");
+  res.locals.error = req.flash("error");
+  next();
 });
 
 app.use("/listings", listings); //we use ROUTES method (it will haldel all routes of listings and middlewares also by using this we have to write this line only)
