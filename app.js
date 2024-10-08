@@ -1,15 +1,14 @@
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
-const Listing = require("./models/listing.js");
 const path = require("path");
 const methodOverride = require("method-override");
 const ejsMate = require("ejs-mate");
-const wrapAsync = require("./utils/wrapAsync.js");
 const ExpressError = require("./utils/ExpressError.js");
-const Joi = require("joi");
-const { listingSchema, reviewSchema } = require("./schema.js"); // server validation by JOI
-const Review = require("./models/review.js");
+const session = require("express-session");
+
+const listings = require("./routes/listing.js");
+const reviews = require("./routes/review.js");
 
 const MONGO_URL = "mongodb://127.0.0.1:27017/wanderlust";
 
@@ -32,124 +31,20 @@ app.use(methodOverride("_method"));
 app.engine("ejs", ejsMate);
 app.use(express.static(path.join(__dirname, "/public")));
 
+const sessionOptions = {
+  secret: "mysupersecretcode", // Used to sign the session ID cookie, ensuring security
+  resave: false, // Don't save session if it wasn't modified during the request
+  saveUninitialized: true, // Save new sessions even if they are not modified yet
+};
+
+app.use(session(sessionOptions));
+
 app.get("/", (req, res) => {
   res.send("Hi, I am root");
 });
 
-const validateListing = (req, res, next) => {
-  let { error } = listingSchema.validate(req.body); //checking validation from joi
-  if (error) {
-    let errMsg = error.details.map((el) => el.message).join(",");
-    throw new ExpressError(404, errMsg);
-  } else {
-    next();
-  }
-};
-
-const validateReview = (req, res, next) => {
-  let { error } = reviewSchema.validate(req.body); //checking validation from joi
-  if (error) {
-    let errMsg = error.details.map((el) => el.message).join(",");
-    throw new ExpressError(404, errMsg);
-  } else {
-    next();
-  }
-};
-
-//Index Route
-app.get(
-  "/listings",
-  wrapAsync(async (req, res, next) => {
-    const allListings = await Listing.find({});
-    res.render("listings/index.ejs", { allListings });
-  })
-);
-
-//New Route
-app.get("/listings/new", (req, res) => {
-  res.render("listings/new.ejs");
-});
-
-//Show Route
-app.get(
-  "/listings/:id",
-  wrapAsync(async (req, res) => {
-    let { id } = req.params;
-    const listing = await Listing.findById(id).populate("reviews");
-    res.render("listings/show.ejs", { listing });
-  })
-);
-
-//Create Route
-app.post(
-  "/listings",
-  validateListing,
-  wrapAsync(async (req, res, next) => {
-    const newListing = new Listing(req.body.listing);
-    await newListing.save();
-    res.redirect("/listings");
-  })
-);
-
-//Edit Route
-app.get(
-  "/listings/:id/edit",
-  wrapAsync(async (req, res) => {
-    let { id } = req.params;
-    const listing = await Listing.findById(id);
-    res.render("listings/edit.ejs", { listing });
-  })
-);
-
-//Update Route
-app.put(
-  "/listings/:id",
-  validateListing,
-  wrapAsync(async (req, res) => {
-    let { id } = req.params;
-    await Listing.findByIdAndUpdate(id, { ...req.body.listing });
-    res.redirect(`/listings/${id}`);
-  })
-);
-
-//Delete Route
-app.delete(
-  "/listings/:id",
-  wrapAsync(async (req, res) => {
-    let { id } = req.params;
-    let deletedListing = await Listing.findByIdAndDelete(id);
-    res.redirect("/listings");
-  })
-);
-
-//Review
-//Post Route
-app.post(
-  "/listings/:id/reviews",
-  validateReview,
-  wrapAsync(async (req, res) => {
-    let listing = await Listing.findById(req.params.id);
-    let newReview = new Review(req.body.review);
-    listing.reviews.push(newReview); // Adding review to listing
-    await newReview.save();
-    await listing.save();
-    res.redirect(`/listings/${listing._id}`); // Redirecting instead of rendering
-  })
-);
-
-//Review
-//Delete route
-app.delete(
-  "/listings/:id/reviews/:reviewId",
-  wrapAsync(async (req, res) => {
-    let { id, reviewId } = req.params;
-
-    await Listing.findByIdAndUpdate(id, { $pull: { reviews: reviewId } });
-    await Review.findByIdAndDelete(reviewId);
-
-    res.redirect(`/listings/${id}`);
-  })
-);
+app.use("/listings", listings); //we use ROUTES method (it will haldel all routes of listings and middlewares also by using this we have to write this line only)
+app.use("/listings/:id/reviews", reviews);
 
 app.all("*", (req, res, next) => {
   next(new ExpressError(404, "Page Not Found!"));
