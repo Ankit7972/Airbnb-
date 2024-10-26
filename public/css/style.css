@@ -133,3 +133,9 @@ body{
     padding-left: 0;
     padding-right: 0;
 }
+
+/* Preview image */
+.Edit-image{
+    display: flex;
+    height: 20vh;
+}
