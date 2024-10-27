@@ -139,3 +139,9 @@ body{
     display: flex;
     height: 20vh;
 }
+
+/* Map */
+#map {
+     width: 80vh ;
+     height: 400px;
+}
