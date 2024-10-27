@@ -19,6 +19,8 @@ const listingsRouter = require("./routes/listing.js");
 const reviewsRouter = require("./routes/review.js");
 const userRouter = require("./routes/user.js");
 
+const dotenv = require("dotenv"); // Here map
+
 const MONGO_URL = "mongodb://127.0.0.1:27017/wanderlust";
 
 main()
