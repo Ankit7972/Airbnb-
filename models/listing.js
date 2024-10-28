@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 const Review = require("./review.js");
-const { ref } = require("joi");
+const { ref, required } = require("joi");
 const Schema = mongoose.Schema;
 
 const listingSchema = new Schema({
@@ -37,6 +37,17 @@ const listingSchema = new Schema({
   owner: {
     type: Schema.Types.ObjectId,
     ref: "User",
+  },
+  geometry: {
+    type: {
+      type: String,
+      enum: ["point"],
+      required: true,
+    },
+    coordinates: {
+      type: [Number],
+      required: true,
+    },
   },
 });
 
