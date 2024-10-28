@@ -1,4 +1,6 @@
 const Listing = require("../models/listing.js");
+const axios = require("axios"); //allows you to call the HERE Geocoding API directly from your server.
+const mapToken = process.env.MAP_TOKEN;
 
 module.exports.index = async (req, res, next) => {
   const allListings = await Listing.find({});
@@ -27,12 +29,29 @@ module.exports.showListing = async (req, res) => {
 };
 
 module.exports.createListing = async (req, res, next) => {
+  // Perform Forward Geocoding with HERE API
+  let response = await axios.get(
+    "https://geocode.search.hereapi.com/v1/geocode",
+    {
+      params: {
+        q: req.body.listing.location,
+        apiKey: mapToken,
+      },
+    }
+  );
+  const { lat, lng } = response.data.items[0].position;
+  const coorDinates = { type: "point", coordinates: [lng, lat] }; // Log the
+
   let url = req.file.path;
   let filename = req.file.filename;
   const newListing = new Listing(req.body.listing);
   newListing.owner = req.user._id;
   newListing.image = { url, filename };
-  await newListing.save();
+
+  newListing.geometry = coorDinates;
+
+  let savedListing = await newListing.save();
+  console.log(savedListing);
   req.flash("success", "New Listing Created!");
   res.redirect("/listings");
 };
